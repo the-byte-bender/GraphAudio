@@ -1,4 +1,5 @@
 using System;
+using GraphAudio.Core;
 using GraphAudio.Nodes;
 
 namespace GraphAudio.Nodes;
