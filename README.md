@@ -4,10 +4,10 @@ High-performance graph-based audio engine for .NET inspired by Web Audio API.
 
 ## Packages
 
-- **GraphAudio.Core**: the core audio processing engine and pure nodes
-- **GraphAudio.IO**: provides audio decoding I/O, as well as `AudioDecoderStreamNode` using libsndfile
-- **GraphAudio.Realtime**: Provides the `RealtimeAudioContext` using miniaudio
-- **GraphAudio.SteamAudio**: Provides Spatial audio and related nodes using Steam Audio
+- [GraphAudio.Core](https://www.nuget.org/packages/GraphAudio.Core): the core audio processing engine and pure nodes
+- [GraphAudio.IO](https://www.nuget.org/packages/GraphAudio.IO): provides audio decoding I/O, as well as `AudioDecoderStreamNode` using libsndfile
+- [GraphAudio.Realtime](https://www.nuget.org/packages/GraphAudio.Realtime): Provides the `RealtimeAudioContext` using miniaudio
+- [GraphAudio.SteamAudio](https://www.nuget.org/packages/GraphAudio.SteamAudio): Provides Spatial audio and related nodes using Steam Audio
 
 ## Development Setup
 
