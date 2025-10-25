@@ -1,7 +1,7 @@
 using System;
 using GraphAudio.Nodes;
 
-namespace GraphAudio.Core.Nodes;
+namespace GraphAudio.Nodes;
 
 /// <summary>
 /// An audio source node that plays back audio from a PlayableAudioBuffer.
