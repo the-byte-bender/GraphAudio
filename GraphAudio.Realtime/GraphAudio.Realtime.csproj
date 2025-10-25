@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AssemblyName>GraphAudio.Realtime</AssemblyName>
+    <Authors>the-byte-bender</Authors>
+    <Description>Real-time audio playback for GraphAudio using miniaudio</Description>
+    <Copyright>2025</Copyright>
+    <Version>0.2.1</Version>
+    <PackageId>GraphAudio.Realtime</PackageId>
+    <PackageProjectUrl>https://github.com/the-byte-bender/GraphAudio</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/the-byte-bender/GraphAudio</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
+    <PackageTags>audio;audio-playback;realtime;miniaudio;cross-platform</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <Optimize>true</Optimize>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GraphAudio.Core" Version="0.2.1" />
+    <PackageReference Include="MiniaudioSharp" Version="1.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
+</Project>

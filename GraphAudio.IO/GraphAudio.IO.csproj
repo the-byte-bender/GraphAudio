@@ -1,0 +1,46 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AssemblyName>GraphAudio.IO</AssemblyName>
+    <Authors>the-byte-bender</Authors>
+    <Description>Audio I/O for GraphAudio using libsndfile</Description>
+    <Copyright>2025</Copyright>
+    <Version>0.2.1</Version>
+    <PackageId>GraphAudio.IO</PackageId>
+    <PackageProjectUrl>https://github.com/the-byte-bender/GraphAudio</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/the-byte-bender/GraphAudio</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
+    <PackageTags>audio;audio-io;libsndfile;wav;flac;ogg;audio-files</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <Optimize>true</Optimize>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GraphAudio.Core" Version="0.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="runtimes\**\*">
+      <PackagePath>runtimes\%(RecursiveDir)%(Filename)%(Extension)</PackagePath>
+      <Pack>true</Pack>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
+</Project>

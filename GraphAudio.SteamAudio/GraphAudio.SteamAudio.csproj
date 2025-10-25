@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AssemblyName>GraphAudio.SteamAudio</AssemblyName>
+    <Authors>the-byte-bender</Authors>
+    <Description>Spatial audio for GraphAudio using Steam Audio</Description>
+    <Copyright>2025</Copyright>
+    <Version>0.2.1</Version>
+    <PackageId>GraphAudio.SteamAudio</PackageId>
+    <PackageProjectUrl>https://github.com/the-byte-bender/GraphAudio</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/the-byte-bender/GraphAudio</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
+    <PackageTags>audio;spatial-audio;3d-audio;steam-audio;hrtf;binaural</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <Optimize>true</Optimize>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GraphAudio.Core" Version="0.2.1" />
+    <PackageReference Include="SteamAudio.NET" Version="4.6.1" />
+    <PackageReference Include="SteamAudio.NET.Natives" Version="4.6.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
+</Project>
