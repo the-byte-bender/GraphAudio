@@ -145,7 +145,6 @@ public sealed class AudioBufferSourceNode : AudioNode, IAudioScheduledSourceNode
         if (!shouldPlay)
         {
             ProduceSilence();
-            TryRaiseEndedEvent(t1);
             return;
         }
 
@@ -361,6 +360,11 @@ public sealed class AudioBufferSourceNode : AudioNode, IAudioScheduledSourceNode
         if (!hasMoreData || (!_loop && _playbackPosition >= durationEndFrame))
         {
             _outputBuffer.Clear();
+            if (double.IsNaN(_stopTime))
+            {
+                _stopTime = t1;
+                _hasStopped = true;
+            }
         }
         else
         {
@@ -368,6 +372,7 @@ public sealed class AudioBufferSourceNode : AudioNode, IAudioScheduledSourceNode
         }
 
         SetOutputBuffer(0, _outputBuffer);
+        TryRaiseEndedEvent(t1);
     }
 
     private void TryRaiseEndedEvent(double currentTime)
