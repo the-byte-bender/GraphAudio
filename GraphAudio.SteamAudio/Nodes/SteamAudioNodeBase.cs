@@ -13,27 +13,28 @@ public abstract unsafe class SteamAudioNodeBase : AudioNode, IDisposable
     private IPL.AudioBuffer _iplOutput;
     private readonly IntPtr* _inputChannelPtrs;
     private readonly IntPtr* _outputChannelPtrs;
-    private readonly int _inputChannelCount;
+    private readonly int _maxInputChannelCount;
     private readonly int _outputChannelCount;
 
     protected SteamAudioNodeBase(
         AudioContextBase context,
-        int inputChannelCount,
+        int maxInputChannelCount,
         int outputChannelCount,
         string? name = null)
         : base(context, inputCount: 1, outputCount: 1, name)
     {
-        _inputChannelCount = inputChannelCount;
+        _maxInputChannelCount = maxInputChannelCount;
         _outputChannelCount = outputChannelCount;
         IplContext = context.GetSteamAudioContext();
+
         _inputChannelPtrs = (IntPtr*)System.Runtime.InteropServices.NativeMemory.AllocZeroed(
-            (nuint)inputChannelCount * (nuint)sizeof(IntPtr));
+            (nuint)maxInputChannelCount * (nuint)sizeof(IntPtr));
         _outputChannelPtrs = (IntPtr*)System.Runtime.InteropServices.NativeMemory.AllocZeroed(
             (nuint)outputChannelCount * (nuint)sizeof(IntPtr));
 
         _iplInput = new IPL.AudioBuffer
         {
-            NumChannels = inputChannelCount,
+            NumChannels = maxInputChannelCount,
             NumSamples = AudioBuffer.FramesPerBlock,
             Data = (IntPtr)_inputChannelPtrs
         };
@@ -72,7 +73,11 @@ public abstract unsafe class SteamAudioNodeBase : AudioNode, IDisposable
 
     private void PinBuffersAndProcess(AudioBuffer input, AudioBuffer output)
     {
-        if (_inputChannelCount == 1 && _outputChannelCount == 2)
+        int actualInputChannels = Math.Min(input.ChannelCount, _maxInputChannelCount);
+
+        _iplInput.NumChannels = actualInputChannels;
+
+        if (actualInputChannels == 1 && _outputChannelCount == 2)
         {
             var inputCh0 = input.GetChannelData(0);
             var outputCh0 = output.GetChannelData(0);
@@ -89,7 +94,7 @@ public abstract unsafe class SteamAudioNodeBase : AudioNode, IDisposable
                 ProcessSteamAudio(ref _iplInput, ref _iplOutput);
             }
         }
-        else if (_inputChannelCount == 1 && _outputChannelCount == 1)
+        else if (actualInputChannels == 1 && _outputChannelCount == 1)
         {
             var inputCh0 = input.GetChannelData(0);
             var outputCh0 = output.GetChannelData(0);
@@ -103,8 +108,29 @@ public abstract unsafe class SteamAudioNodeBase : AudioNode, IDisposable
                 ProcessSteamAudio(ref _iplInput, ref _iplOutput);
             }
         }
+        else if (actualInputChannels == 2 && _outputChannelCount == 2)
+        {
+            var inputCh0 = input.GetChannelData(0);
+            var inputCh1 = input.GetChannelData(1);
+            var outputCh0 = output.GetChannelData(0);
+            var outputCh1 = output.GetChannelData(1);
+
+            fixed (float* inputPtr0 = inputCh0)
+            fixed (float* inputPtr1 = inputCh1)
+            fixed (float* outputPtr0 = outputCh0)
+            fixed (float* outputPtr1 = outputCh1)
+            {
+                _inputChannelPtrs[0] = (IntPtr)inputPtr0;
+                _inputChannelPtrs[1] = (IntPtr)inputPtr1;
+                _outputChannelPtrs[0] = (IntPtr)outputPtr0;
+                _outputChannelPtrs[1] = (IntPtr)outputPtr1;
+
+                ProcessSteamAudio(ref _iplInput, ref _iplOutput);
+            }
+        }
         else
         {
+            throw new NotSupportedException($"Unsupported channel configuration: {actualInputChannels} input -> {_outputChannelCount} output");
         }
     }
 

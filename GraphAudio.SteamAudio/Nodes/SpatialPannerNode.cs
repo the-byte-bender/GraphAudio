@@ -12,7 +12,8 @@ public sealed unsafe class SpatialPannerNode : SteamAudioNodeBase
 {
     private readonly IPL.Hrtf _hrtf;
     private IPL.BinauralEffect _binauralEffect;
-    private IPL.DirectEffect _directEffect;
+    private IPL.DirectEffect _directEffectMono;
+    private IPL.DirectEffect _directEffectStereo;
 
     public AudioParam PositionX { get; }
     public AudioParam PositionY { get; }
@@ -26,6 +27,7 @@ public sealed unsafe class SpatialPannerNode : SteamAudioNodeBase
     public AudioParam ConeInnerAngle { get; }
     public AudioParam ConeOuterAngle { get; }
     public AudioParam ConeOuterGain { get; }
+    public AudioParam SpatialBlend { get; }
 
     private DistanceModelType _distanceModel = DistanceModelType.Inverse;
     public DistanceModelType DistanceModel
@@ -42,7 +44,7 @@ public sealed unsafe class SpatialPannerNode : SteamAudioNodeBase
     }
 
     public SpatialPannerNode(AudioContextBase context)
-        : base(context, inputChannelCount: 1, outputChannelCount: 2, name: "SpatialPanner")
+        : base(context, maxInputChannelCount: 2, outputChannelCount: 2, name: "SpatialPanner")
     {
         _hrtf = context.GetHrtf();
 
@@ -61,16 +63,29 @@ public sealed unsafe class SpatialPannerNode : SteamAudioNodeBase
         if (error != IPL.Error.Success)
             throw new InvalidOperationException($"Failed to create binaural effect: {error}");
 
-        var directSettings = new IPL.DirectEffectSettings
+        var directSettingsMono = new IPL.DirectEffectSettings
         {
             NumChannels = 1
         };
 
-        error = IPL.DirectEffectCreate(IplContext, in audioSettings, in directSettings, out _directEffect);
+        error = IPL.DirectEffectCreate(IplContext, in audioSettings, in directSettingsMono, out _directEffectMono);
         if (error != IPL.Error.Success)
         {
             IPL.BinauralEffectRelease(ref _binauralEffect);
-            throw new InvalidOperationException($"Failed to create direct effect: {error}");
+            throw new InvalidOperationException($"Failed to create mono direct effect: {error}");
+        }
+
+        var directSettingsStereo = new IPL.DirectEffectSettings
+        {
+            NumChannels = 2
+        };
+
+        error = IPL.DirectEffectCreate(IplContext, in audioSettings, in directSettingsStereo, out _directEffectStereo);
+        if (error != IPL.Error.Success)
+        {
+            IPL.BinauralEffectRelease(ref _binauralEffect);
+            IPL.DirectEffectRelease(ref _directEffectMono);
+            throw new InvalidOperationException($"Failed to create stereo direct effect: {error}");
         }
 
         PositionX = CreateAudioParam("positionX", 0f, float.MinValue, float.MaxValue, AutomationRate.KRate);
@@ -85,9 +100,11 @@ public sealed unsafe class SpatialPannerNode : SteamAudioNodeBase
         ConeInnerAngle = CreateAudioParam("coneInnerAngle", 360f, 0f, 360f, AutomationRate.KRate);
         ConeOuterAngle = CreateAudioParam("coneOuterAngle", 360f, 0f, 360f, AutomationRate.KRate);
         ConeOuterGain = CreateAudioParam("coneOuterGain", 0f, 0f, 1f, AutomationRate.KRate);
+        SpatialBlend = CreateAudioParam("spatialBlend", 1f, 0f, 1f, AutomationRate.KRate);
 
-        Inputs[0].SetChannelCount(1);
-        Inputs[0].SetChannelCountMode(ChannelCountMode.Explicit);
+        Inputs[0].SetChannelCount(2);
+        Inputs[0].SetChannelCountMode(ChannelCountMode.ClampedMax);
+        Inputs[0].SetChannelInterpretation(ChannelInterpretation.Speakers);
     }
 
     protected override void ProcessSteamAudio(ref IPL.AudioBuffer input, ref IPL.AudioBuffer output)
@@ -163,13 +180,16 @@ public sealed unsafe class SpatialPannerNode : SteamAudioNodeBase
         directParams.Transmission[1] = 1.0f;
         directParams.Transmission[2] = 1.0f;
 
-        IPL.DirectEffectApply(_directEffect, ref directParams, ref input, ref input);
+        var directEffect = input.NumChannels == 1 ? _directEffectMono : _directEffectStereo;
+        IPL.DirectEffectApply(directEffect, ref directParams, ref input, ref input);
+
+        var spatialBlend = SpatialBlend.GetValues()[0];
 
         var binauralParams = new IPL.BinauralEffectParams
         {
             Direction = direction,
             Interpolation = IPL.HrtfInterpolation.Bilinear,
-            SpatialBlend = 1.0f,
+            SpatialBlend = spatialBlend,
             Hrtf = _hrtf,
             PeakDelays = IntPtr.Zero
         };
@@ -206,10 +226,16 @@ public sealed unsafe class SpatialPannerNode : SteamAudioNodeBase
             IPL.BinauralEffectRelease(ref _binauralEffect);
         }
 
-        if (_directEffect.Handle != IntPtr.Zero)
+        if (_directEffectMono.Handle != IntPtr.Zero)
         {
-            IPL.DirectEffectRelease(ref _directEffect);
+            IPL.DirectEffectRelease(ref _directEffectMono);
         }
+
+        if (_directEffectStereo.Handle != IntPtr.Zero)
+        {
+            IPL.DirectEffectRelease(ref _directEffectStereo);
+        }
+
         base.OnDispose();
     }
 }
