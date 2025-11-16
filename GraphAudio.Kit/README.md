@@ -26,11 +26,12 @@ using GraphAudio.Kit.DataProviders;
 using GraphAudio.Realtime;
 
 // Create the engine that manages all your sounds
-var engine = new AudioEngine(new RealtimeAudioContext(
+var context = new RealtimeAudioContext(
     sampleRate: 48000,
     channels: 2,
     bufferSize: 256
-));
+);
+var engine = new AudioEngine(context);
 
 // Tell it where to find your audio files
 engine.DataProvider = new FileSystemDataProvider("path/to/your/audio/folder");
