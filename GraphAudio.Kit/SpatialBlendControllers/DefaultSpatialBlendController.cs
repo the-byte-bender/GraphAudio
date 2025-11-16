@@ -3,16 +3,14 @@ using System;
 namespace GraphAudio.Kit.SpatialBlendControllers;
 
 /// <summary>
-/// Expand immediately from 0 to 1 at any non-zero distance.
+/// A spatial blend controller that always returns 1.
 /// </summary>
 public sealed class DefaultSpatialBlendController : ISpatialBlendController
 {
     public static DefaultSpatialBlendController Instance { get; } = new();
 
-    private const float Epsilon = 1e-4f;
-
     public float GetBlend(float distance)
     {
-        return distance <= Epsilon ? 0f : 1f;
+        return 1f;
     }
 }
