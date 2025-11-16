@@ -105,7 +105,7 @@ public sealed class AudioBus
 
         var currentTime = Engine.Context.CurrentTime;
 
-        var currentValue = Math.Max(_gainNode.Gain.Value, 0.0001f);
+        var currentValue = Math.Max(_gain, 0.0001f);
         var targetValue = Math.Max(target, 0.0001f);
 
         _gainNode.Gain.SetValueAtTime(currentValue, currentTime);
