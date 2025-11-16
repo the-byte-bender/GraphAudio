@@ -319,7 +319,7 @@ public abstract class AudioStreamNodeBase : AudioNode
         {
             Stop();
         }
-        if (_outputBuffer is null)
+        if (_outputBuffer is not null)
         {
             Context.BufferPool.Return(_outputBuffer);
             _outputBuffer = null;
