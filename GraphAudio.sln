@@ -13,8 +13,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraphAudio.SteamAudio", "Gr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraphAudio.Kit", "GraphAudio.Kit\GraphAudio.Kit.csproj", "{5EB371F3-6B2D-4785-8EBE-C702DEA52EBA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraphAudio.Kit.Example", "GraphAudio.Kit.Example\GraphAudio.Kit.Example.csproj", "{A2B61FBB-058F-469B-AA79-42843B3996F4}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -85,18 +83,6 @@ Global
 		{5EB371F3-6B2D-4785-8EBE-C702DEA52EBA}.Release|x64.Build.0 = Release|Any CPU
 		{5EB371F3-6B2D-4785-8EBE-C702DEA52EBA}.Release|x86.ActiveCfg = Release|Any CPU
 		{5EB371F3-6B2D-4785-8EBE-C702DEA52EBA}.Release|x86.Build.0 = Release|Any CPU
-		{A2B61FBB-058F-469B-AA79-42843B3996F4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A2B61FBB-058F-469B-AA79-42843B3996F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A2B61FBB-058F-469B-AA79-42843B3996F4}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{A2B61FBB-058F-469B-AA79-42843B3996F4}.Debug|x64.Build.0 = Debug|Any CPU
-		{A2B61FBB-058F-469B-AA79-42843B3996F4}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{A2B61FBB-058F-469B-AA79-42843B3996F4}.Debug|x86.Build.0 = Debug|Any CPU
-		{A2B61FBB-058F-469B-AA79-42843B3996F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A2B61FBB-058F-469B-AA79-42843B3996F4}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A2B61FBB-058F-469B-AA79-42843B3996F4}.Release|x64.ActiveCfg = Release|Any CPU
-		{A2B61FBB-058F-469B-AA79-42843B3996F4}.Release|x64.Build.0 = Release|Any CPU
-		{A2B61FBB-058F-469B-AA79-42843B3996F4}.Release|x86.ActiveCfg = Release|Any CPU
-		{A2B61FBB-058F-469B-AA79-42843B3996F4}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
