@@ -128,11 +128,14 @@ public sealed class BufferedSound : Sound
 
     protected override void DoPlay()
     {
-        if (_sourceNode is null)
+        if (_sourceNode is not null)
         {
-            CreateSourceNode();
-            _sourceNode!.Start(0, _currentOffset, double.PositiveInfinity);
+            DisposeSourceNode();
+            _currentOffset = 0;
         }
+
+        CreateSourceNode();
+        _sourceNode!.Start(0, _currentOffset, double.PositiveInfinity);
     }
 
     protected override void DoPause()
