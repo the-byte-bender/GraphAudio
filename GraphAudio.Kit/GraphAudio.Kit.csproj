@@ -30,7 +30,7 @@
 
   <ItemGroup>
     <PackageReference Include="GraphAudio.Core" Version="0.3.2" />
-    <PackageReference Include="GraphAudio.IO" Version="0.3.2" />
+    <PackageReference Include="GraphAudio.IO" Version="0.3.3" />
     <PackageReference Include="GraphAudio.Realtime" Version="0.3.2" />
     <PackageReference Include="GraphAudio.SteamAudio" Version="0.3.2" />
   </ItemGroup>
