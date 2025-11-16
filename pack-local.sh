@@ -8,6 +8,7 @@ PROJECTS=(
     "GraphAudio.IO"
     "GraphAudio.Realtime"
     "GraphAudio.SteamAudio"
+    "GraphAudio.Kit"
 )
 
 if [ ! -d "$LOCAL_FEED" ]; then
