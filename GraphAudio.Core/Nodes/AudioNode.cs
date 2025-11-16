@@ -208,24 +208,32 @@ public abstract class AudioNode
     {
         if (_disposed)
             return;
-        _disposed = true;
 
-        foreach (var output in _outputs)
+        void DoDispose(AudioContextBase _)
         {
-            output.DisconnectAll();
+            if (_disposed)
+                return;
+            _disposed = true;
+
+            foreach (var output in _outputs)
+            {
+                output.DisconnectAll();
+            }
+
+            foreach (var input in _inputs)
+            {
+                input.DisconnectAll();
+                input.Dispose();
+            }
+
+            foreach (var param in _params)
+            {
+                param.Dispose();
+            }
+
+            OnDispose();
         }
 
-        foreach (var input in _inputs)
-        {
-            input.DisconnectAll();
-            input.Dispose();
-        }
-
-        foreach (var param in _params)
-        {
-            param.Dispose();
-        }
-
-        OnDispose();
+        Context.ExecuteOrPost(DoDispose);
     }
 }

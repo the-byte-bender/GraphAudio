@@ -74,12 +74,11 @@ public sealed class AudioNodeInput
 
     internal void DisconnectAll()
     {
-        for (int i = _connectedOutputs.Count - 1; i >= 0; i--)
+        var outputs = _connectedOutputs.ToArray();
+        foreach (var output in outputs)
         {
-            var output = _connectedOutputs[i];
             output.DisconnectFrom(this);
         }
-        _connectedOutputs.Clear();
         _bufferDirty = true;
     }
 

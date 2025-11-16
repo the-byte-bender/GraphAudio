@@ -61,11 +61,11 @@ public sealed class AudioNodeOutput
 
     internal void DisconnectAll()
     {
-        for (int i = _connectedInputs.Count - 1; i >= 0; i--)
+        var inputs = _connectedInputs.ToArray();
+        _connectedInputs.Clear();
+        foreach (var input in inputs)
         {
-            var input = _connectedInputs[i];
             input.RemoveConnection(this);
-            _connectedInputs.RemoveAt(i);
         }
     }
 
