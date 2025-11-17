@@ -16,10 +16,13 @@ internal unsafe class RingBuffer : IDisposable
         public volatile int ReadPos;
         public int Capacity;
         public int Channels;
+        public IntPtr SemaphoreHandle;
     }
 
     private readonly NativeRingBuffer* _native;
     private readonly GCHandle _bufferHandle;
+    private readonly GCHandle _semaphoreHandle;
+    private readonly SemaphoreSlim _semaphore;
 
     public int Channels => _native->Channels;
     public int Capacity => _native->Capacity;
@@ -35,11 +38,17 @@ internal unsafe class RingBuffer : IDisposable
         var buffer = new float[capacity * channels];
         _bufferHandle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
         _native->BufferPtr = (float*)_bufferHandle.AddrOfPinnedObject();
+
+        _semaphore = new SemaphoreSlim(0);
+        _semaphoreHandle = GCHandle.Alloc(_semaphore);
+        _native->SemaphoreHandle = GCHandle.ToIntPtr(_semaphoreHandle);
     }
 
     internal NativeRingBuffer* GetNativePointer() => _native;
 
     public int AvailableWrite => (Capacity + _native->ReadPos - _native->WritePos - 1) % Capacity;
+
+    public bool WaitForSpace(int millisecondsTimeout) => _semaphore.Wait(millisecondsTimeout);
 
     /// <summary>
     /// Write an interleaved buffer (frames x channels) into the ring buffer.
@@ -78,6 +87,9 @@ internal unsafe class RingBuffer : IDisposable
 
     public void Dispose()
     {
+        if (_semaphoreHandle.IsAllocated)
+            _semaphoreHandle.Free();
+        _semaphore?.Dispose();
         if (_bufferHandle.IsAllocated)
             _bufferHandle.Free();
         if (_native != null)

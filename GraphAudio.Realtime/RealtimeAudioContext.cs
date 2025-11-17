@@ -6,6 +6,7 @@ using System.Threading;
 using MiniaudioSharp;
 using GraphAudio.Core;
 using static GraphAudio.Core.RingBuffer;
+using NativeRingBuffer = GraphAudio.Core.RingBuffer.NativeRingBuffer;
 
 namespace GraphAudio.Realtime;
 
@@ -153,7 +154,7 @@ public unsafe class RealtimeAudioContext : AudioContextBase
             }
             else
             {
-                Thread.SpinWait(2048);
+                _ringBuffer.WaitForSpace(5);
             }
         }
     }
@@ -219,6 +220,12 @@ public unsafe class RealtimeAudioContext : AudioContextBase
         {
             int silenceCount = framesRemaining * ringBuffer->Channels;
             NativeMemory.Fill(outputPtr + samplesWritten, (uint)(silenceCount * sizeof(float)), 0);
+        }
+
+        if (ringBuffer->SemaphoreHandle != IntPtr.Zero)
+        {
+            var semaphore = (SemaphoreSlim)GCHandle.FromIntPtr(ringBuffer->SemaphoreHandle).Target!;
+            semaphore.Release();
         }
     }
 
