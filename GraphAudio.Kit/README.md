@@ -54,7 +54,7 @@ Once you've done the setup above, playing a sound is dead simple:
 
 ```csharp
 // One-shot sounds (fire and forget)
-engine.PlayOneShot("sounds/footstep.ogg");
+engine.PlayOneShot("footstep.ogg");
 
 // PlayOneShot also takes a setup callback, which you can use to set up the sounds properties before it plays and the engine owns it.
 ```
@@ -67,7 +67,7 @@ For sounds you want to control (music, ambience , etc.), create a `Sound` object
 
 ```csharp
 // Load a sound into memory for instant playback
-var sound = await engine.CreateBufferedSoundAsync("sounds/music.ogg");
+var sound = await engine.CreateBufferedSoundAsync("music.ogg");
 
 // Control it like you'd expect
 sound.Play();
@@ -106,7 +106,7 @@ For detached sounds in your 3D world, just set their position:
 
 ```csharp
 var sound = await engine.CreateBufferedSoundAsync(
-    "sounds/engine.ogg",
+    "engine.ogg",
     mixState: SoundMixState.BinoralSpatialized  // Enable 3D audio for that sound.
 );
 
@@ -134,7 +134,7 @@ var carAnchor = new SpatialAnchor();
 
 // Attach the engine sound to it
 var engineSound = await engine.CreateBufferedSoundAsync(
-    "sounds/car_engine.ogg",
+    "car_engine.ogg",
     mixState: SoundMixState.BinoralSpatialized
 );
 engineSound.Anchor = carAnchor;
@@ -262,14 +262,14 @@ If you know you'll need certain sounds soon, preload them to avoid slowdowns:
 // Load multiple sounds in parallel
 await engine.PreloadBuffersAsync(new[]
 {
-    "sounds/footstep_1.ogg",
-    "sounds/footstep_2.ogg",
-    "sounds/footstep_3.ogg",
-    "sounds/jump.ogg"
+    "footstep_1.ogg",
+    "footstep_2.ogg",
+    "footstep_3.ogg",
+    "jump.ogg"
 });
 
 // Now they'll play instantly when needed
-engine.PlayOneShot("sounds/footstep_1.ogg", setup: sound => sound.Anchor = playerAnchor);  // No load time!
+engine.PlayOneShot("footstep_1.ogg", setup: sound => sound.Anchor = playerAnchor);  // No load time!
 ```
 
 ## Fade In/Out
