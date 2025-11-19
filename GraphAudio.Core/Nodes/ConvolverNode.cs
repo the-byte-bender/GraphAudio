@@ -16,7 +16,7 @@ public sealed class ConvolverNode : AudioNode
     private bool _isTrueStereo;
 
     /// <summary>
-    /// A mono, stereo, or 4-channel AudioBuffer containing the impulse response used by the ConvolverNode.
+    /// An audio buffer containing the impulse response used by the ConvolverNode.
     /// </summary>
     /// <Remarks>
     /// The impulse response buffer's sample rate must match the audio context's sample rate or an exception will be thrown.
