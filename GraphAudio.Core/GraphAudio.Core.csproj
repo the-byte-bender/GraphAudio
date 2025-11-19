@@ -13,7 +13,7 @@
     <Authors>the-byte-bender</Authors>
     <Description>High-performence graph-based audio engine for .NET inspired by Web Audio API</Description>
     <Copyright>2025</Copyright>
-    <Version>0.3.2</Version>
+    <Version>0.4.0</Version>
     <PackageId>GraphAudio.Core</PackageId>
     <PackageProjectUrl>https://github.com/the-byte-bender/GraphAudio</PackageProjectUrl>
     <RepositoryUrl>https://github.com/the-byte-bender/GraphAudio</RepositoryUrl>
