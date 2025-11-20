@@ -24,7 +24,7 @@ for project in "${PROJECTS[@]}"; do
     project_path="./$project/$project.csproj"
     
     if [ -f "$project_path" ]; then
-        dotnet pack "$project_path" -c Debug -o "$LOCAL_FEED"
+        dotnet pack "$project_path" -c Release -o "$LOCAL_FEED"
         echo -e "$project packed successfully"
     else
         echo -e "Project not found: $project_path"
