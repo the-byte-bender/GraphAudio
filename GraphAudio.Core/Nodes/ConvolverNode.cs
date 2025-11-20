@@ -150,6 +150,7 @@ public sealed class ConvolverNode : AudioNode
             }
         }
 
+        _outputBuffer.MarkAsNonSilent();
         Outputs[0].SetBuffer(_outputBuffer);
     }
 
