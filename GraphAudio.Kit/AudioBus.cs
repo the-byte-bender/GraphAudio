@@ -82,7 +82,7 @@ public sealed class AudioBus
         _gainNode = new GainNode(engine.Context);
 
         var destination = parent?.Input ?? engine.Context.Destination;
-        Effects = new EffectChain(engine.Context, _gainNode, destination);
+        Effects = new EffectChain(engine, _gainNode, destination);
 
         if (parent is not null)
         {

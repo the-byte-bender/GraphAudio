@@ -225,33 +225,68 @@ engine.MasterBus.Gain = 0.8f;  // Global volume control
 
 ## Advanced: Effect Chains
 
-Effect chains let you add DSP effects to individual sounds or entire buses. Effects process in the order you add them:
+Effect chains let you add high-level effects to individual sounds or entire buses. Effects process in the order you add them.
+
+You can use high-level effects like `ReverbEffect`:
 
 ```csharp
-var sound = await engine.CreateBufferedSoundAsync("dialogue.ogg");
+var reverb = new ReverbEffect(engine);
+await reverb.SetImpulseResponseAsync("irs/hall.wav");
+reverb.Wet.Value = 0.5f;
 
-// Add effects to the sound
-var lowpass = new BiQuadFilterNode(engine.Context);
-lowpass.Type = BiQuadFilterNode.FilterType.LowPass;
-lowpass.Frequency.Value = 800; 
-
-sound.Effects.Add(lowpass);
-
-// You can also add effects on an entire bus!
-musicBus.Effects.Add(*);
-
-// You must dispose of effects manually when they're done.
+soundOrBus.Effects.Add(reverb);
 ```
 
-You can modify effect chains at runtime:
+Or you can wrap standard GraphAudio nodes using `NodeEffect`:
 
 ```csharp
-// Remove effects
-soundOrBus.Effects.Remove(lowpass);
-soundOrBus.Effects.Clear();  // Remove all
+var lowpass = new BiQuadFilterNode(engine.Context);
+lowpass.Type = BiQuadFilterNode.FilterType.LowPass;
+lowpass.Frequency.Value = 800;
 
-// Insert at specific positions
-soundOrBus.Effects.Insert(0, something);  // Add at the start of the chain
+sound.Effects.Add(new NodeEffect(engine, lowpass));
+```
+
+The `EffectChain` takes ownership of the effects. When you remove an effect or dispose the chain, the effects (and their underlying nodes) are automatically disposed.
+
+```csharp
+soundOrBus.Effects.Remove(reverb);
+soundOrBus.Effects.Clear();
+
+soundOrBus.Effects.Insert(0, newReverb);
+```
+
+### Advanced: creating Custom Effects
+
+You are encouraged to create your own reusable effects by subclassing `Effect`. An effect is simply a mini-graph with an input and an output. This allows you to encapsulate complex DSP graphs (like a multi-tap delay or a specific filter chain) into a single, easy-to-use package.
+
+To implement a custom effect, you need to:
+
+1.  **Inherit from `Effect`**: Pass the `AudioEngine` to the base constructor.
+2.  **Define Input/Output**: Expose the entry and exit nodes of your internal graph via the `Input` and `Output` properties.
+3.  **Manage Resources**: Override `OnDispose` to clean up any nodes you created.
+
+Here is an example custom effect:
+
+```csharp
+public class BoostEffect : Effect
+{
+    private readonly GainNode _gain;
+
+    public override AudioNode Input => _gain;
+    public override AudioNode Output => _gain;
+
+    public BoostEffect(AudioEngine engine, float amount) : base(engine)
+    {
+        _gain = new GainNode(engine.Context);
+        _gain.Gain.Value = amount;
+    }
+
+    protected override void OnDispose()
+    {
+        _gain.Dispose();
+    }
+}
 ```
 
 ## Preloading for Performance
@@ -326,4 +361,3 @@ Sound.DefaultSpatialBlendController = controller;
 6. **Use streaming for long audio** (music, ambience, cutscenes...). Use buffered sounds for everything else.
 
 7. **Dispose sounds you're done with** if you hold a reference.
-

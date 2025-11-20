@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using GraphAudio.Core;
 using GraphAudio.Nodes;
 
@@ -9,28 +10,29 @@ namespace GraphAudio.Kit;
 /// Manages a chain of audio effects.
 /// </summary>
 /// <remarks>
-/// This will not take ownership of any nodes/effects added to the chain. The caller is responsible for disposing them if needed.
+/// The chain takes ownership of the effects added to it. 
+/// When an effect is removed or the chain is cleared, the effect is disposed.
 /// </remarks>
-public sealed class EffectChain
+public sealed class EffectChain : IDisposable
 {
-    private readonly List<AudioNode> _effects = new();
-    private readonly AudioContextBase _context;
+    private readonly List<Effect> _effects = new();
+    private readonly AudioEngine _engine;
     private AudioNode _source;
     private AudioNode _destination;
 
     /// <summary>
     /// The effects in the chain, in processing order.
     /// </summary>
-    public IReadOnlyList<AudioNode> Effects => _effects;
+    public IReadOnlyList<Effect> Effects => _effects;
 
     /// <summary>
     /// Gets the number of effects in the chain.
     /// </summary>
     public int Count => _effects.Count;
 
-    internal EffectChain(AudioContextBase context, AudioNode source, AudioNode destination)
+    internal EffectChain(AudioEngine engine, AudioNode source, AudioNode destination)
     {
-        _context = context;
+        _engine = engine;
         _source = source;
         _destination = destination;
         _source.Connect(_destination);
@@ -39,7 +41,7 @@ public sealed class EffectChain
     /// <summary>
     /// Adds an effect to the end of the chain.
     /// </summary>
-    public void Add(AudioNode effect)
+    public void Add(Effect effect)
     {
         Insert(_effects.Count, effect);
     }
@@ -47,7 +49,7 @@ public sealed class EffectChain
     /// <summary>
     /// Inserts an effect at the specified index.
     /// </summary>
-    public void Insert(int index, AudioNode effect)
+    public void Insert(int index, Effect effect)
     {
         if (index < 0 || index > _effects.Count)
             throw new ArgumentOutOfRangeException(nameof(index));
@@ -59,7 +61,7 @@ public sealed class EffectChain
     /// <summary>
     /// Removes an effect from the chain.
     /// </summary>
-    public bool Remove(AudioNode effect)
+    public bool Remove(Effect effect)
     {
         int index = _effects.IndexOf(effect);
         if (index < 0) return false;
@@ -76,14 +78,19 @@ public sealed class EffectChain
         if (index < 0 || index >= _effects.Count)
             throw new ArgumentOutOfRangeException(nameof(index));
 
+        var effect = _effects[index];
         _effects.RemoveAt(index);
+
+        effect.Output.Disconnect();
+        effect.Dispose();
+
         Rebuild();
     }
 
     /// <summary>
     /// Gets the effect at the specified index.
     /// </summary>
-    public AudioNode this[int index]
+    public Effect this[int index]
     {
         get
         {
@@ -99,6 +106,12 @@ public sealed class EffectChain
     public void Clear()
     {
         if (_effects.Count == 0) return;
+
+        foreach (var effect in _effects)
+        {
+            effect.Output.Disconnect();
+            effect.Dispose();
+        }
 
         _effects.Clear();
         Rebuild();
@@ -116,7 +129,7 @@ public sealed class EffectChain
         _source.Disconnect();
         foreach (var effect in _effects)
         {
-            effect.Disconnect();
+            effect.Output.Disconnect();
         }
 
         if (_effects.Count == 0)
@@ -125,14 +138,19 @@ public sealed class EffectChain
         }
         else
         {
-            _source.Connect(_effects[0]);
+            _source.Connect(_effects[0].Input);
 
             for (int i = 0; i < _effects.Count - 1; i++)
             {
-                _effects[i].Connect(_effects[i + 1]);
+                _effects[i].Output.Connect(_effects[i + 1].Input);
             }
 
-            _effects[^1].Connect(_destination);
+            _effects[^1].Output.Connect(_destination);
         }
+    }
+
+    public void Dispose()
+    {
+        Clear();
     }
 }

@@ -301,12 +301,12 @@ public abstract class Sound : IDisposable
 
         if (_output != _gainNode)
         {
-            _effects = new EffectChain(engine.Context, _gainNode, _output);
+            _effects = new EffectChain(engine, _gainNode, _output);
         }
         else
         {
             // For direct mode, effects go between gain and bus
-            _effects = new EffectChain(engine.Context, _gainNode, Bus.Input);
+            _effects = new EffectChain(engine, _gainNode, Bus.Input);
         }
 
         if (_output != _gainNode)
