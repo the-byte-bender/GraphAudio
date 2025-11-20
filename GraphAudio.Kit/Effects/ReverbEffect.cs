@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using GraphAudio.Core;
 using GraphAudio.Nodes;
 using GraphAudio.Kit.DataProviders;
+using GraphAudio.IO;
 
 namespace GraphAudio.Kit;
 
@@ -11,10 +12,12 @@ namespace GraphAudio.Kit;
 /// </summary>
 public sealed class ReverbEffect : Effect
 {
+    private bool _downmixEnabled = true;
     private readonly GainNode _inputSplit;
     private readonly GainNode _outputMerge;
     private readonly GainNode _dryGain;
     private readonly GainNode _wetGain;
+    private readonly GainNode _downmixer;
     private readonly ConvolverNode _convolver;
 
     /// <inheritdoc/>
@@ -43,18 +46,36 @@ public sealed class ReverbEffect : Effect
     /// </summary>
     public bool EnableTrueStereo => _convolver.EnableTrueStereo;
 
+    /// <summary>
+    /// Whether to enable downmixing of the input signal to mono before convolution.
+    /// </summary>
+    public bool DownmixEnabled
+    {
+        get => _downmixEnabled;
+        set
+        {
+            _downmixEnabled = value;
+            _downmixer.Inputs[0].SetChannelCount(value ? 1 : 2);
+            _downmixer.Inputs[0].SetChannelCountMode(value ? ChannelCountMode.Explicit : ChannelCountMode.Max);
+        }
+    }
+
     public ReverbEffect(AudioEngine engine) : base(engine)
     {
         _inputSplit = new GainNode(Context);
         _outputMerge = new GainNode(Context);
         _dryGain = new GainNode(Context);
         _wetGain = new GainNode(Context);
+        _downmixer = new GainNode(Context);
+        _downmixer.Inputs[0].SetChannelCount(1);
+        _downmixer.Inputs[0].SetChannelCountMode(ChannelCountMode.Explicit);
         _convolver = new ConvolverNode(Context);
 
         _inputSplit.Connect(_dryGain);
         _dryGain.Connect(_outputMerge);
 
-        _inputSplit.Connect(_convolver);
+        _inputSplit.Connect(_downmixer);
+        _downmixer.Connect(_convolver);
         _convolver.Connect(_wetGain);
         _wetGain.Connect(_outputMerge);
     }
@@ -77,7 +98,7 @@ public sealed class ReverbEffect : Effect
         if (Engine.DataProvider is null)
             throw new InvalidOperationException("No data provider is configured on the AudioEngine.");
 
-        var buffer = await Engine.DataProvider.GetPlayableBufferAsync(path);
+        var buffer = AudioDecoder.LoadFromStream(await Engine.DataProvider.GetStreamAsync(path));
         SetImpulseResponse(buffer, normalize, enableTrueStereo);
     }
 
