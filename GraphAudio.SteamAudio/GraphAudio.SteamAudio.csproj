@@ -12,7 +12,7 @@
     <Authors>the-byte-bender</Authors>
     <Description>Spatial audio for GraphAudio using Steam Audio</Description>
     <Copyright>2025</Copyright>
-    <Version>0.4.1</Version>
+    <Version>0.4.2</Version>
     <PackageId>GraphAudio.SteamAudio</PackageId>
     <PackageProjectUrl>https://github.com/the-byte-bender/GraphAudio</PackageProjectUrl>
     <RepositoryUrl>https://github.com/the-byte-bender/GraphAudio</RepositoryUrl>

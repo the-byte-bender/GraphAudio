@@ -1,4 +1,3 @@
-using System;
 using GraphAudio.Core;
 using GraphAudio.SteamAudio;
 using SteamAudio;
@@ -28,6 +27,10 @@ public sealed unsafe class SpatialPannerNode : SteamAudioNodeBase
     public AudioParam ConeOuterAngle { get; }
     public AudioParam ConeOuterGain { get; }
     public AudioParam SpatialBlend { get; }
+    public AudioParam Occlusion { get; }
+    public AudioParam TransmissionLow { get; }
+    public AudioParam TransmissionMid { get; }
+    public AudioParam TransmissionHigh { get; }
 
     private DistanceModelType _distanceModel = DistanceModelType.Inverse;
     public DistanceModelType DistanceModel
@@ -101,6 +104,10 @@ public sealed unsafe class SpatialPannerNode : SteamAudioNodeBase
         ConeOuterAngle = CreateAudioParam("coneOuterAngle", 360f, 0f, 360f, AutomationRate.KRate);
         ConeOuterGain = CreateAudioParam("coneOuterGain", 0f, 0f, 1f, AutomationRate.KRate);
         SpatialBlend = CreateAudioParam("spatialBlend", 1f, 0f, 1f, AutomationRate.KRate);
+        Occlusion = CreateAudioParam("occlusion", 0f, 0f, 1f, AutomationRate.KRate);
+        TransmissionLow = CreateAudioParam("transmissionLow", 0f, 0f, 1f, AutomationRate.KRate);
+        TransmissionMid = CreateAudioParam("transmissionMid", 0f, 0f, 1f, AutomationRate.KRate);
+        TransmissionHigh = CreateAudioParam("transmissionHigh", 0f, 0f, 1f, AutomationRate.KRate);
 
         Inputs[0].SetChannelCount(2);
         Inputs[0].SetChannelCountMode(ChannelCountMode.ClampedMax);
@@ -118,6 +125,10 @@ public sealed unsafe class SpatialPannerNode : SteamAudioNodeBase
         var refDist = RefDistance.GetValues()[0];
         var maxDist = MaxDistance.GetValues()[0];
         var rolloff = RolloffFactor.GetValues()[0];
+        var occlusion = Occlusion.GetValues()[0];
+        var transLow = TransmissionLow.GetValues()[0];
+        var transMid = TransmissionMid.GetValues()[0];
+        var transHigh = TransmissionHigh.GetValues()[0];
 
         var sourcePos = new IPL.Vector3 { X = posX, Y = posY, Z = posZ };
         var listenerTransform = Context.GetListenerTransform();
@@ -152,6 +163,46 @@ public sealed unsafe class SpatialPannerNode : SteamAudioNodeBase
             distance = 0f;
         }
 
+        float directivityValue = 1.0f;
+        var innerAngle = ConeInnerAngle.GetValues()[0];
+        var outerAngle = ConeOuterAngle.GetValues()[0];
+        var outerGain = ConeOuterGain.GetValues()[0];
+
+        if (innerAngle < 360f || outerAngle < 360f)
+        {
+            float oriMag = MathF.Sqrt(oriX * oriX + oriY * oriY + oriZ * oriZ);
+            if (oriMag > 0.0001f)
+            {
+                float invOri = 1.0f / oriMag;
+                float nOriX = oriX * invOri;
+                float nOriY = oriY * invOri;
+                float nOriZ = oriZ * invOri;
+
+                float dot = nOriX * (-worldDirection.X) + nOriY * (-worldDirection.Y) + nOriZ * (-worldDirection.Z);
+                dot = Math.Clamp(dot, -1f, 1f);
+
+                float angleDeg = MathF.Acos(dot) * 180.0f / MathF.PI;
+                float absAngle = MathF.Abs(angleDeg);
+
+                float halfInner = innerAngle * 0.5f;
+                float halfOuter = outerAngle * 0.5f;
+
+                if (absAngle <= halfInner)
+                {
+                    directivityValue = 1.0f;
+                }
+                else if (absAngle >= halfOuter)
+                {
+                    directivityValue = outerGain;
+                }
+                else
+                {
+                    float t = (absAngle - halfInner) / (halfOuter - halfInner);
+                    directivityValue = 1.0f + t * (outerGain - 1.0f);
+                }
+            }
+        }
+
         var distModel = new IPL.DistanceAttenuationModel
         {
             Type = IPL.DistanceAttenuationModelType.InverseDistance,
@@ -164,21 +215,34 @@ public sealed unsafe class SpatialPannerNode : SteamAudioNodeBase
         float attenuation = IPL.DistanceAttenuationCalculate(IplContext, sourcePos, listenerTransform.Origin, in distModel);
         attenuation = ApplyDistanceModel(distance, refDist, maxDist, rolloff, attenuation);
 
+        var flags = IPL.DirectEffectFlags.ApplyDistanceAttenuation;
+        if (directivityValue < 0.999f) flags |= IPL.DirectEffectFlags.ApplyDirectivity;
+        if (occlusion > 0.0f)
+        {
+            flags |= IPL.DirectEffectFlags.ApplyOcclusion;
+            if (transLow > 0.0f || transMid > 0.0f || transHigh > 0.0f)
+            {
+                flags |= IPL.DirectEffectFlags.ApplyTransmission;
+            }
+        }
+
         var directParams = new IPL.DirectEffectParams
         {
-            Flags = IPL.DirectEffectFlags.ApplyDistanceAttenuation,
-            TransmissionType = IPL.TransmissionType.FrequencyIndependent,
+            Flags = flags,
+            TransmissionType = (flags & IPL.DirectEffectFlags.ApplyTransmission) != 0
+                ? IPL.TransmissionType.FrequencyDependent
+                : IPL.TransmissionType.FrequencyIndependent,
             DistanceAttenuation = attenuation,
-            Directivity = 1.0f,
-            Occlusion = 0f
+            Directivity = directivityValue,
+            Occlusion = occlusion
         };
 
         directParams.AirAbsorption[0] = 1.0f;
         directParams.AirAbsorption[1] = 1.0f;
         directParams.AirAbsorption[2] = 1.0f;
-        directParams.Transmission[0] = 1.0f;
-        directParams.Transmission[1] = 1.0f;
-        directParams.Transmission[2] = 1.0f;
+        directParams.Transmission[0] = transLow;
+        directParams.Transmission[1] = transMid;
+        directParams.Transmission[2] = transHigh;
 
         var directEffect = input.NumChannels == 1 ? _directEffectMono : _directEffectStereo;
         IPL.DirectEffectApply(directEffect, ref directParams, ref input, ref input);
