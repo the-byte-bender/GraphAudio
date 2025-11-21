@@ -124,7 +124,7 @@ engine.SetListener(
 
 The sound will now pan with hrtf. Call `engine.Update()` in your game loop to keep everything in sync.
 
-### The Better Way: Spatial Anchors
+### Spatial Anchors
 
 If you have entities that play multiple sounds, Instead of manually updating every sound's position, you attach sounds to an anchor and update the anchor with your game entity's position:
 
@@ -186,7 +186,23 @@ sound.SetCone(
 );
 ```
 
-## Audio Buses: Organize Your Sound
+### Advanced: Occlusion & Transmission
+
+Simulate sound passing through walls or obstacles:
+
+```csharp
+// 0.0 = Open Air, 1.0 = Fully Blocked
+sound.Occlusion = 1.0f;
+
+// Occlusion must be > 0 for transmission to work.
+sound.SetTransmission(
+    low: 0.9f,
+    mid: 0.9f,
+    high: 0.8f
+);
+```
+
+## Audio Buses
 
 Buses let you group and control the gain and effects on multiple sounds at once. Think a `music` bus, a `UI` bus, `gameplay` bus, etc.
 

@@ -248,6 +248,83 @@ public abstract class Sound : IDisposable
     }
 
     /// <summary>
+    /// The occlusion factor of the sound, from 0.0 (no occlusion) to 1.0 (fully occluded).
+    /// Only applicable if the sound is spatialized.
+    /// </summary>
+    public float Occlusion
+    {
+        get => _spatialPanner?.Occlusion.Value ?? 0f;
+        set
+        {
+            if (_spatialPanner is not null)
+            {
+                _spatialPanner.Occlusion.Value = value;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The transmission factor for low frequencies, from 0.0 (opaque) to 1.0 (transparent).
+    /// Only applicable if the sound is spatialized and Occlusion > 0.
+    /// </summary>
+    public float TransmissionLow
+    {
+        get => _spatialPanner?.TransmissionLow.Value ?? 0f;
+        set
+        {
+            if (_spatialPanner is not null)
+            {
+                _spatialPanner.TransmissionLow.Value = value;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The transmission factor for mid frequencies, from 0.0 (opaque) to 1.0 (transparent).
+    /// Only applicable if the sound is spatialized and Occlusion > 0.
+    /// </summary>
+    public float TransmissionMid
+    {
+        get => _spatialPanner?.TransmissionMid.Value ?? 0f;
+        set
+        {
+            if (_spatialPanner is not null)
+            {
+                _spatialPanner.TransmissionMid.Value = value;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The transmission factor for high frequencies, from 0.0 (opaque) to 1.0 (transparent).
+    /// Only applicable if the sound is spatialized and Occlusion > 0.
+    /// </summary>
+    public float TransmissionHigh
+    {
+        get => _spatialPanner?.TransmissionHigh.Value ?? 0f;
+        set
+        {
+            if (_spatialPanner is not null)
+            {
+                _spatialPanner.TransmissionHigh.Value = value;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Sets the transmission factors for all frequency bands.
+    /// </summary>
+    public void SetTransmission(float low, float mid, float high)
+    {
+        if (_spatialPanner is not null)
+        {
+            _spatialPanner.TransmissionLow.Value = low;
+            _spatialPanner.TransmissionMid.Value = mid;
+            _spatialPanner.TransmissionHigh.Value = high;
+        }
+    }
+
+    /// <summary>
     /// The mixing state of the sound.
     /// </summary>
     public SoundMixState MixState { get; }
