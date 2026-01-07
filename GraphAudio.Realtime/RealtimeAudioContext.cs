@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
-using MiniaudioSharp;
 using GraphAudio.Core;
 using static GraphAudio.Core.RingBuffer;
 using NativeRingBuffer = GraphAudio.Core.RingBuffer.NativeRingBuffer;
@@ -39,10 +38,13 @@ public unsafe class RealtimeAudioContext : AudioContextBase
         _ringBuffer = new RingBuffer(channels, bufferSize * 5);
 
         _maContext = (ma_context*)Marshal.AllocHGlobal(sizeof(ma_context));
-        if (Miniaudio.ma_context_init(null, 0, null, _maContext) != ma_result.MA_SUCCESS)
-            throw new InvalidOperationException("Failed to initialize miniaudio context");
+
+        var contextResult = Miniaudio.ma_context_init(null, 0, null, _maContext);
+        if (contextResult != ma_result.MA_SUCCESS)
+            throw new InvalidOperationException($"Failed to initialize miniaudio context: {contextResult}");
 
         _device = (ma_device*)Marshal.AllocHGlobal(sizeof(ma_device));
+
         InitializeDevice(deviceInfo, channels, bufferSize);
 
         _isRunning = true;
@@ -106,6 +108,7 @@ public unsafe class RealtimeAudioContext : AudioContextBase
     private void InitializeDevice(AudioDeviceInfo? deviceInfo, int channels, int bufferSize)
     {
         var config = Miniaudio.ma_device_config_init(ma_device_type.ma_device_type_playback);
+
         config.playback.format = ma_format.ma_format_f32;
         config.playback.channels = (uint)channels;
         config.sampleRate = (uint)SampleRate;
@@ -120,8 +123,10 @@ public unsafe class RealtimeAudioContext : AudioContextBase
             config.playback.pDeviceID = &deviceId;
         }
 
-        if (Miniaudio.ma_device_init(_maContext, &config, _device) != ma_result.MA_SUCCESS)
-            throw new InvalidOperationException($"Failed to initialize device: {deviceInfo?.Name ?? "default"}");
+        var result = Miniaudio.ma_device_init(_maContext, &config, _device);
+
+        if (result != ma_result.MA_SUCCESS)
+            throw new InvalidOperationException($"Failed to initialize device: {deviceInfo?.Name ?? "default"}, error: {result}");
 
         CurrentDevice = deviceInfo ?? GetDefaultDevice();
     }

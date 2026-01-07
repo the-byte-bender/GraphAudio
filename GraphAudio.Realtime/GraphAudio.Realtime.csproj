@@ -30,8 +30,6 @@
 
   <ItemGroup>
     <PackageReference Include="GraphAudio.Core" Version="0.4.1" />
-    <PackageReference Include="MiniaudioSharp" Version="1.0.2" ExcludeAssets="native"
-      PrivateAssets="compile" />
   </ItemGroup>
 
   <ItemGroup>
