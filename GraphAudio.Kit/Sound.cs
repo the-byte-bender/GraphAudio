@@ -19,7 +19,17 @@ public enum SoundMixState
     /// <summary>
     /// The sound is spatialized in 3d space with hrtf.
     /// </summary>
-    BinoralSpatialized
+    BinoralSpatialized,
+
+    /// <summary>
+    /// The sound is spatialized in stereo using linear steps based on distance from the listener. Good for 2d panning.
+    /// Uses a <see cref="StereoPannerNode"/> and adjusts gain and pitch.
+    /// </summary>
+    /// <remarks>
+    /// Spatial Blend, Occlusion, Transmission, and Distance Models are NOT supported in this mode.
+    /// Use <see cref="Sound.StepLinearConfig"/> to customize behavior.
+    /// </remarks>
+    StepLinearSpatialized
 }
 
 /// <summary>
@@ -37,6 +47,7 @@ public abstract class Sound : IDisposable
     private readonly AudioEngine _engine;
     private readonly GainNode _gainNode;
     private readonly SpatialPannerNode? _spatialPanner;
+    private readonly StereoPannerNode? _stereoPanner;
     private readonly AudioNode _output;
     private readonly EffectChain _effects;
 
@@ -349,7 +360,17 @@ public abstract class Sound : IDisposable
     /// </summary>
     public ISpatialBlendController SpatialBlendController { get; set; }
 
+    /// <summary>
+    /// Configuration for step-linear spatialization. Only effective when <see cref="MixState"/> is <see cref="SoundMixState.StepLinearSpatialized"/>.
+    /// </summary>
+    public StepLinearConfig StepLinearConfig { get; set; } = DefaultStepLinearConfig;
+
     public static ISpatialBlendController DefaultSpatialBlendController { get; set; } = SpatialBlendControllers.DefaultSpatialBlendController.Instance;
+
+    /// <summary>
+    /// The global default configuration for step-linear spatialization.
+    /// </summary>
+    public static StepLinearConfig DefaultStepLinearConfig { get; set; } = StepLinearConfig.Default;
 
     protected Sound(AudioEngine engine, SoundMixState mixState, AudioBus? bus = null)
     {
@@ -370,6 +391,11 @@ public abstract class Sound : IDisposable
             case SoundMixState.BinoralSpatialized:
                 _spatialPanner = new SpatialPannerNode(engine.Context);
                 _output = _spatialPanner;
+                break;
+
+            case SoundMixState.StepLinearSpatialized:
+                _stereoPanner = new StereoPannerNode(engine.Context);
+                _output = _stereoPanner;
                 break;
 
             default:
@@ -435,9 +461,38 @@ public abstract class Sound : IDisposable
             }
         }
 
-        UpdateSpatialBlend();
+        if (MixState == SoundMixState.StepLinearSpatialized)
+        {
+            UpdateStepLinear();
+        }
+        else
+        {
+            UpdateSpatialBlend();
+        }
 
         DoUpdate();
+    }
+
+    private void UpdateStepLinear()
+    {
+        if (_stereoPanner is null)
+            return;
+
+        var finalPosition = _anchor is not null
+            ? _anchor.Position + _position
+            : _position;
+
+        var result = StepLinearCalculator.Calculate(
+            _engine.ListenerPosition,
+            finalPosition,
+            StepLinearConfig,
+            0.0f,
+            Gain,
+            PlaybackRate);
+
+        _stereoPanner.Pan.Value = result.Pan;
+        _gainNode.Gain.Value = result.Gain;
+        ApplyEffectivePlaybackRate(result.Pitch);
     }
 
     private void UpdateSpatialPosition()
@@ -587,6 +642,7 @@ public abstract class Sound : IDisposable
             _output.Disconnect();
 
             _spatialPanner?.Dispose();
+            _stereoPanner?.Dispose();
             _gainNode.Dispose();
 
             OnDispose();
@@ -609,6 +665,13 @@ public abstract class Sound : IDisposable
     }
 
     protected virtual void DoUpdate()
+    { }
+
+    /// <summary>
+    /// Applies the effective playback rate to the underlying audio nodes.
+    /// This is used by <see cref="SoundMixState.StepLinearSpatialized"/> to apply pitch shifts.
+    /// </summary>
+    protected virtual void ApplyEffectivePlaybackRate(float rate)
     { }
 
     protected abstract void DoPlay();

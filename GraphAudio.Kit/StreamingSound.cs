@@ -64,6 +64,12 @@ public sealed class StreamingSound : Sound
         _streamNode.Stop();
     }
 
+    /// <inheritdoc/>
+    protected override void ApplyEffectivePlaybackRate(float rate)
+    {
+        _streamNode.PlaybackRate.Value = rate;
+    }
+
     protected override void OnDispose()
     {
         _streamNode?.Dispose();

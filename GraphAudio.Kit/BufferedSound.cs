@@ -152,6 +152,15 @@ public sealed class BufferedSound : Sound
         }
     }
 
+    /// <inheritdoc/>
+    protected override void ApplyEffectivePlaybackRate(float rate)
+    {
+        if (_sourceNode is not null)
+        {
+            _sourceNode.PlaybackRate.Value = rate;
+        }
+    }
+
     protected override void OnDispose()
     {
         if (!_isDisposed)
