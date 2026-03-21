@@ -130,6 +130,18 @@ public sealed class AudioEngine : IDisposable
     }
 
     /// <summary>
+    /// Removes a bus by path, disconnecting it from its parent and the audio graph.
+    /// </summary>
+    public void RemoveBus(string path)
+    {
+        path = path.Trim().ToLowerInvariant();
+        if (!_buses.TryGetValue(path, out var bus)) return;
+        bus.Parent?.RemoveChild(bus);
+        bus.Disconnect();
+        _buses.Remove(path);
+    }
+
+    /// <summary>
     /// Creates a buffered sound from a file path.
     /// </summary>
     public async Task<BufferedSound> CreateBufferedSoundAsync(string path, SoundMixState mixState = SoundMixState.Direct, AudioBus? bus = null, CancellationToken cancellationToken = default)
