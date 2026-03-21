@@ -118,6 +118,8 @@ public sealed class AudioBus
         _gainNode.Gain.Value = _muted ? 0f : _gain;
     }
 
+    internal void RemoveChild(AudioBus child) => _childBuses.Remove(child);
+
     internal void Disconnect()
     {
         _gainNode.Disconnect();
