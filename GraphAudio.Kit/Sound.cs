@@ -29,7 +29,7 @@ public enum SoundMixState
     /// Spatial Blend, Occlusion, Transmission, and Distance Models are NOT supported in this mode.
     /// Use <see cref="Sound.StepLinearConfig"/> to customize behavior.
     /// </remarks>
-    StepLinearSpatialized
+    StepLinearSpatialized,
 }
 
 /// <summary>
@@ -50,6 +50,11 @@ public abstract class Sound : IDisposable
     private readonly StereoPannerNode? _stereoPanner;
     private readonly AudioNode _output;
     private readonly EffectChain _effects;
+
+    /// <summary>
+    /// The current position of the sound in the world, including anchor offset.
+    /// </summary>
+    private Vector3 WorldPosition => _anchor is not null ? _anchor.Position + _position : _position;
 
     /// <summary>
     /// The audio engine this sound belongs to.
@@ -128,10 +133,8 @@ public abstract class Sound : IDisposable
         set
         {
             _anchor = value;
-            if (_anchor is not null)
-            {
-                _lastAnchorVersion = 0;
-            }
+            _lastAnchorVersion = 0;
+            UpdateSpatialPosition();
         }
     }
 
@@ -365,7 +368,8 @@ public abstract class Sound : IDisposable
     /// </summary>
     public StepLinearConfig StepLinearConfig { get; set; } = DefaultStepLinearConfig;
 
-    public static ISpatialBlendController DefaultSpatialBlendController { get; set; } = SpatialBlendControllers.DefaultSpatialBlendController.Instance;
+    public static ISpatialBlendController DefaultSpatialBlendController { get; set; } =
+        SpatialBlendControllers.DefaultSpatialBlendController.Instance;
 
     /// <summary>
     /// The global default configuration for step-linear spatialization.
@@ -425,7 +429,8 @@ public abstract class Sound : IDisposable
     /// </summary>
     public void SetBus(AudioBus bus)
     {
-        if (bus.Engine != Engine) throw new ArgumentException("Bus must belong to the same engine.", nameof(bus));
+        if (bus.Engine != Engine)
+            throw new ArgumentException("Bus must belong to the same engine.", nameof(bus));
 
         Bus = bus;
 
@@ -458,6 +463,7 @@ public abstract class Sound : IDisposable
             {
                 _lastAnchorVersion = currentVersion;
                 UpdateSpatialPosition();
+                return;
             }
         }
 
@@ -478,31 +484,30 @@ public abstract class Sound : IDisposable
         if (_stereoPanner is null)
             return;
 
-        var finalPosition = _anchor is not null
-            ? _anchor.Position + _position
-            : _position;
-
         var result = StepLinearCalculator.Calculate(
             _engine.ListenerPosition,
-            finalPosition,
+            WorldPosition,
             StepLinearConfig,
             0.0f,
-            Gain,
-            PlaybackRate);
+            Gain
+        );
 
         _stereoPanner.Pan.Value = result.Pan;
         _gainNode.Gain.Value = result.Gain;
-        ApplyEffectivePlaybackRate(result.Pitch);
     }
 
     private void UpdateSpatialPosition()
     {
+        var finalPosition = WorldPosition;
+
+        if (MixState == SoundMixState.StepLinearSpatialized)
+        {
+            UpdateStepLinear();
+            return;
+        }
+
         if (_spatialPanner is null)
             return;
-
-        var finalPosition = _anchor is not null
-            ? _anchor.Position + _position
-            : _position;
 
         _spatialPanner.PositionX.Value = finalPosition.X;
         _spatialPanner.PositionY.Value = finalPosition.Y;
@@ -515,12 +520,8 @@ public abstract class Sound : IDisposable
         if (_spatialPanner is null)
             return;
 
-        var finalPosition = _anchor is not null
-            ? _anchor.Position + _position
-            : _position;
-
         var listener = _engine.ListenerPosition;
-        var delta = finalPosition - listener;
+        var delta = WorldPosition - listener;
         var distance = delta.Length();
         var blend = Math.Clamp(SpatialBlendController.GetBlend(distance), 0f, 1f);
         _spatialPanner.SpatialBlend.Value = blend;
@@ -531,11 +532,16 @@ public abstract class Sound : IDisposable
     /// </summary>
     public void Play(double fadeInDuration = 0)
     {
+        UpdateSpatialPosition();
+
         if (fadeInDuration > 0)
         {
             _gainNode.Gain.SetValueAtTime(0.0001f, Engine.Context.CurrentTime);
             DoPlay();
-            _gainNode.Gain.ExponentialRampToValueAtTime(Gain, Engine.Context.CurrentTime + fadeInDuration);
+            _gainNode.Gain.ExponentialRampToValueAtTime(
+                Gain,
+                Engine.Context.CurrentTime + fadeInDuration
+            );
             return;
         }
 
@@ -558,7 +564,10 @@ public abstract class Sound : IDisposable
         if (fadeOutDuration > 0)
         {
             _gainNode.Gain.SetValueAtTime(_gainNode.Gain.Value, Engine.Context.CurrentTime);
-            _gainNode.Gain.ExponentialRampToValueAtTime(0.0001f, Engine.Context.CurrentTime + fadeOutDuration);
+            _gainNode.Gain.ExponentialRampToValueAtTime(
+                0.0001f,
+                Engine.Context.CurrentTime + fadeOutDuration
+            );
             await Task.Delay((int)(fadeOutDuration * 1000)).ConfigureAwait(false);
         }
 
@@ -581,7 +590,10 @@ public abstract class Sound : IDisposable
         if (fadeOutDuration > 0)
         {
             _gainNode.Gain.SetValueAtTime(_gainNode.Gain.Value, Engine.Context.CurrentTime);
-            _gainNode.Gain.ExponentialRampToValueAtTime(0.0001f, Engine.Context.CurrentTime + fadeOutDuration);
+            _gainNode.Gain.ExponentialRampToValueAtTime(
+                0.0001f,
+                Engine.Context.CurrentTime + fadeOutDuration
+            );
             await Task.Delay((int)(fadeOutDuration * 1000)).ConfigureAwait(false);
         }
 
@@ -606,7 +618,12 @@ public abstract class Sound : IDisposable
     /// Configure distance attenuation for the sound.
     /// Only applicable if the sound is spatialized.
     /// </summary>
-    public void SetDistanceModel(SpatialPannerNode.DistanceModelType model, float refDistance, float maxDistance, float rolloffFactor)
+    public void SetDistanceModel(
+        SpatialPannerNode.DistanceModelType model,
+        float refDistance,
+        float maxDistance,
+        float rolloffFactor
+    )
     {
         if (_spatialPanner is null)
             return;
@@ -651,9 +668,7 @@ public abstract class Sound : IDisposable
         _disposed = true;
     }
 
-    protected virtual void OnDispose()
-    {
-    }
+    protected virtual void OnDispose() { }
 
     /// <summary>
     /// Throws an ObjectDisposedException if this sound has been disposed.
@@ -664,15 +679,13 @@ public abstract class Sound : IDisposable
             throw new ObjectDisposedException(GetType().Name);
     }
 
-    protected virtual void DoUpdate()
-    { }
+    protected virtual void DoUpdate() { }
 
     /// <summary>
     /// Applies the effective playback rate to the underlying audio nodes.
     /// This is used by <see cref="SoundMixState.StepLinearSpatialized"/> to apply pitch shifts.
     /// </summary>
-    protected virtual void ApplyEffectivePlaybackRate(float rate)
-    { }
+    protected virtual void ApplyEffectivePlaybackRate(float rate) { }
 
     protected abstract void DoPlay();
     protected abstract void DoPause();
