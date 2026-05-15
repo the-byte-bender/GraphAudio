@@ -64,3 +64,4 @@ publish.sh
 
 # Desktop specific
 .DS_Store
+*.lscache
