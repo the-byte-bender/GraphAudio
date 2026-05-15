@@ -9,8 +9,11 @@ namespace GraphAudio.Nodes;
 /// </summary>
 public sealed class ConvolverNode : AudioNode
 {
+    private const int HeadBlockSize = 128;
+    private const int TailBlockSize = 8192;
+
     private PlayableAudioBuffer? _buffer;
-    private PartitionedConvolver[]? _convolvers;
+    private ThreadedTwoStageConvolver[]? _convolvers;
     private AudioBuffer? _outputBuffer;
     private int _effectiveOutputChannels;
     private bool _isTrueStereo;
@@ -27,12 +30,18 @@ public sealed class ConvolverNode : AudioNode
         get => _buffer;
         set
         {
-            if (_buffer == value) return;
+            if (_buffer == value)
+                return;
 
             if (value is null)
             {
                 Context.Post(_ =>
                 {
+                    if (_convolvers is not null)
+                    {
+                        foreach (var conv in _convolvers)
+                            conv.Dispose();
+                    }
                     _buffer = null;
                     _convolvers = null;
                     _effectiveOutputChannels = 0;
@@ -43,16 +52,22 @@ public sealed class ConvolverNode : AudioNode
             }
 
             if (!value.IsInitialized)
-                throw new InvalidOperationException("Impulse response buffer must be initialized before being assigned to the ConvolverNode.");
+                throw new InvalidOperationException(
+                    "Impulse response buffer must be initialized before being assigned to the ConvolverNode."
+                );
 
             if (value.SampleRate != Context.SampleRate)
-                throw new InvalidOperationException($"Impulse response buffer sample rate must match the audio context sample rate. Impulse response buffer sample rate: {value.SampleRate}, Audio context sample rate: {Context.SampleRate}.");
+                throw new InvalidOperationException(
+                    $"Impulse response buffer sample rate must match the audio context sample rate. Impulse response buffer sample rate: {value.SampleRate}, Audio context sample rate: {Context.SampleRate}."
+                );
 
-            var newConvolvers = new PartitionedConvolver[value.NumberOfChannels];
+            var newConvolvers = new ThreadedTwoStageConvolver[value.NumberOfChannels];
             for (int i = 0; i < value.NumberOfChannels; i++)
             {
                 var channelData = value.GetChannelData(i);
-                newConvolvers[i] = new PartitionedConvolver(channelData, AudioBuffer.FramesPerBlock, Normalize);
+                var conv = new ThreadedTwoStageConvolver();
+                conv.Init(HeadBlockSize, TailBlockSize, channelData, Normalize);
+                newConvolvers[i] = conv;
             }
 
             Context.Post(_ =>
@@ -95,9 +110,7 @@ public sealed class ConvolverNode : AudioNode
     public bool EnableTrueStereo { get; set; } = true;
 
     public ConvolverNode(AudioContextBase context)
-        : base(context, inputCount: 1, outputCount: 1, "Convolver")
-    {
-    }
+        : base(context, inputCount: 1, outputCount: 1, "Convolver") { }
 
     protected override void Process()
     {
@@ -109,7 +122,8 @@ public sealed class ConvolverNode : AudioNode
             int ch = input.ChannelCount;
             if (_outputBuffer is null || _outputBuffer.ChannelCount != ch)
             {
-                if (_outputBuffer is not null) Context.BufferPool.Return(_outputBuffer);
+                if (_outputBuffer is not null)
+                    Context.BufferPool.Return(_outputBuffer);
                 _outputBuffer = Context.BufferPool.Rent(ch);
             }
 
@@ -120,7 +134,8 @@ public sealed class ConvolverNode : AudioNode
 
         if (_outputBuffer is null || _outputBuffer.ChannelCount != _effectiveOutputChannels)
         {
-            if (_outputBuffer is not null) Context.BufferPool.Return(_outputBuffer);
+            if (_outputBuffer is not null)
+                Context.BufferPool.Return(_outputBuffer);
             _outputBuffer = Context.BufferPool.Rent(_effectiveOutputChannels);
         }
 
@@ -170,7 +185,12 @@ public sealed class ConvolverNode : AudioNode
             Context.BufferPool.Return(_outputBuffer);
             _outputBuffer = null;
         }
-        _convolvers = null;
-        _buffer = null;
+
+        if (_convolvers is not null)
+        {
+            foreach (var conv in _convolvers)
+                conv.Dispose();
+            _convolvers = null;
+        }
     }
 }
