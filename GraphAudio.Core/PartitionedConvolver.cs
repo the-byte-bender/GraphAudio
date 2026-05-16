@@ -33,13 +33,27 @@ internal unsafe class PartitionedConvolver
     private readonly Complex[] _fftOutputComplex;
 
     private readonly RealFourierTransform _fft;
+    private readonly float? _precomputedScale;
 
-    public PartitionedConvolver(ReadOnlySpan<float> impulseResponse, int blockSize = 128, bool normalize = true)
+    public PartitionedConvolver(
+        ReadOnlySpan<float> impulseResponse,
+        int blockSize = 128,
+        bool normalize = true
+    )
+        : this(impulseResponse, blockSize, normalize, precomputedScale: null) { }
+
+    public PartitionedConvolver(
+        ReadOnlySpan<float> impulseResponse,
+        int blockSize,
+        bool normalize,
+        float? precomputedScale
+    )
     {
         _blockSize = blockSize;
         _fftSize = blockSize * 2;
         _complexCount = (_fftSize / 2) + 1;
         _fft = new RealFourierTransform(_fftSize);
+        _precomputedScale = precomputedScale;
 
         _nPartitions = (int)Math.Ceiling((double)impulseResponse.Length / blockSize);
 
@@ -65,7 +79,13 @@ internal unsafe class PartitionedConvolver
     private void PrepareImpulseResponse(ReadOnlySpan<float> sourceIr, bool normalize)
     {
         float scale = 1.0f;
-        if (normalize) scale = CalculateNormalizationScale(sourceIr);
+        if (normalize)
+        {
+            if (_precomputedScale.HasValue)
+                scale = _precomputedScale.Value;
+            else
+                scale = CalculateNormalizationScale(sourceIr);
+        }
 
         double[] tempTime = new double[_fftSize + 2];
         int irLen = sourceIr.Length;
@@ -90,20 +110,23 @@ internal unsafe class PartitionedConvolver
         }
     }
 
-    private static float CalculateNormalizationScale(ReadOnlySpan<float> response)
+    public static float CalculateNormalizationScale(ReadOnlySpan<float> response)
     {
         const float GainCalibration = -58;
         const float MinPower = 0.000125f;
         double sumSquared = 0;
-        for (int i = 0; i < response.Length; i++) sumSquared += response[i] * response[i];
+        for (int i = 0; i < response.Length; i++)
+            sumSquared += response[i] * response[i];
         float power = (float)Math.Sqrt(sumSquared / response.Length);
-        if (float.IsNaN(power) || float.IsInfinity(power) || power < MinPower) power = MinPower;
+        if (float.IsNaN(power) || float.IsInfinity(power) || power < MinPower)
+            power = MinPower;
         return (1.0f / power) * (float)Math.Pow(10, GainCalibration * 0.05f);
     }
 
     public void Process(ReadOnlySpan<float> input, Span<float> output)
     {
-        for (int i = 0; i < _blockSize; i++) _fftInput[i] = input[i];
+        for (int i = 0; i < _blockSize; i++)
+            _fftInput[i] = input[i];
         Array.Clear(_fftInput, _blockSize, _blockSize);
 
         _fft.Forward(_fftInput).CopyTo(_fftOutputComplex);
@@ -125,7 +148,8 @@ internal unsafe class PartitionedConvolver
         ProcessSpectralConvolution();
 
         _writeIndex--;
-        if (_writeIndex < 0) _writeIndex = _nPartitions - 1;
+        if (_writeIndex < 0)
+            _writeIndex = _nPartitions - 1;
 
         fixed (float* pAccR = _accReal)
         fixed (float* pAccI = _accImag)
@@ -171,7 +195,8 @@ internal unsafe class PartitionedConvolver
             for (int p = 0; p < partitions; p++)
             {
                 int delayPos = (currentDelayIdx + p);
-                if (delayPos >= partitions) delayPos -= partitions;
+                if (delayPos >= partitions)
+                    delayPos -= partitions;
 
                 float* pDr = pDelayRBase + (delayPos * count);
                 float* pDi = pDelayIBase + (delayPos * count);
