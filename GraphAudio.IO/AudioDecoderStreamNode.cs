@@ -9,7 +9,7 @@ namespace GraphAudio.Nodes;
 
 /// <summary>
 /// A node that decodes audio on-demand from a file or any other stream.
-/// 
+///
 /// This must be used in realtime contexts.
 /// </summary>
 public sealed class AudioDecoderStreamNode : AudioStreamNodeBase
@@ -44,13 +44,21 @@ public sealed class AudioDecoderStreamNode : AudioStreamNodeBase
     /// </summary>
     public int SampleRate => _decoder.SampleRate;
 
-    private AudioDecoderStreamNode(AudioContextBase context, Stream stream, int bufferSize, int bufferCount)
+    private AudioDecoderStreamNode(
+        AudioContextBase context,
+        Stream stream,
+        int bufferSize,
+        int bufferCount
+    )
         : base(context)
     {
         if (bufferSize <= 0)
             throw new ArgumentOutOfRangeException(nameof(bufferSize));
         if (bufferCount < 2)
-            throw new ArgumentOutOfRangeException(nameof(bufferCount), "Must have at least 2 buffers");
+            throw new ArgumentOutOfRangeException(
+                nameof(bufferCount),
+                "Must have at least 2 buffers"
+            );
         if (!stream.CanSeek)
             throw new ArgumentException("Stream must be seekable", nameof(stream));
 
@@ -60,7 +68,11 @@ public sealed class AudioDecoderStreamNode : AudioStreamNodeBase
         _bufferPool = new PlayableAudioBuffer[bufferCount];
         for (int i = 0; i < bufferCount; i++)
         {
-            _bufferPool[i] = new PlayableAudioBuffer(_decoder.Channels, bufferSize, _decoder.SampleRate);
+            _bufferPool[i] = new PlayableAudioBuffer(
+                _decoder.Channels,
+                bufferSize,
+                _decoder.SampleRate
+            );
             _bufferPool[i].MarkAsInitialized();
         }
 
@@ -80,7 +92,7 @@ public sealed class AudioDecoderStreamNode : AudioStreamNodeBase
         {
             IsBackground = true,
             Name = "AudioDecoderThread",
-            Priority = ThreadPriority.AboveNormal
+            Priority = ThreadPriority.AboveNormal,
         };
         _decoderThread.Start();
         _commandQueue.Enqueue(RefillAllBuffers);
@@ -89,7 +101,12 @@ public sealed class AudioDecoderStreamNode : AudioStreamNodeBase
     /// <summary>
     /// Creates a new AudioDecoderStreamNode from a file path.
     /// </summary>
-    public static AudioDecoderStreamNode FromFile(AudioContextBase context, string filePath, int bufferSize = 4096, int bufferCount = 3)
+    public static AudioDecoderStreamNode FromFile(
+        AudioContextBase context,
+        string filePath,
+        int bufferSize = 4096,
+        int bufferCount = 3
+    )
     {
         var stream = File.OpenRead(filePath);
         return new AudioDecoderStreamNode(context, stream, bufferSize, bufferCount);
@@ -98,11 +115,23 @@ public sealed class AudioDecoderStreamNode : AudioStreamNodeBase
     /// <summary>
     /// Creates a new AudioDecoderStreamNode from a file path.
     /// </summary>
-    public static Task<AudioDecoderStreamNode> FromFileAsync(AudioContextBase context, string filePath, int bufferSize = 4096, int bufferCount = 3)
+    public static Task<AudioDecoderStreamNode> FromFileAsync(
+        AudioContextBase context,
+        string filePath,
+        int bufferSize = 4096,
+        int bufferCount = 3
+    )
     {
         return Task.Run(() =>
         {
-            var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: false);
+            var stream = new FileStream(
+                filePath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                4096,
+                useAsync: false
+            );
             return new AudioDecoderStreamNode(context, stream, bufferSize, bufferCount);
         });
     }
@@ -111,7 +140,12 @@ public sealed class AudioDecoderStreamNode : AudioStreamNodeBase
     /// Creates a new AudioDecoderStreamNode from a stream.
     /// Takes ownership of the stream: it will be disposed when the node is disposed.
     /// </summary>
-    public static AudioDecoderStreamNode FromStream(AudioContextBase context, Stream stream, int bufferSize = 4096, int bufferCount = 3)
+    public static AudioDecoderStreamNode FromStream(
+        AudioContextBase context,
+        Stream stream,
+        int bufferSize = 4096,
+        int bufferCount = 3
+    )
     {
         return new AudioDecoderStreamNode(context, stream, bufferSize, bufferCount);
     }
@@ -160,13 +194,17 @@ public sealed class AudioDecoderStreamNode : AudioStreamNodeBase
         {
             while (_commandQueue.TryDequeue(out var command))
             {
-                if (_disposed) break;
+                if (_disposed)
+                    break;
                 command();
             }
 
             if (!_disposed && _shouldDecode && State != StreamState.Stopped)
             {
-                if (TryDequeueProcessedBuffer(out var processedBuffer) && processedBuffer is not null)
+                if (
+                    TryDequeueProcessedBuffer(out var processedBuffer)
+                    && processedBuffer is not null
+                )
                 {
                     FillBuffer(processedBuffer);
                     QueueBuffer(processedBuffer);
@@ -199,12 +237,22 @@ public sealed class AudioDecoderStreamNode : AudioStreamNodeBase
                     int offset = (int)framesRead;
                     long additionalFrames = _decoder.DecodePlanar(_loopWrapBuffer);
 
+                    long consumedFromHead = Math.Min(additionalFrames, remaining);
                     for (int ch = 0; ch < _decoder.Channels; ch++)
                     {
-                        Array.Copy(_loopWrapBuffer[ch], 0, _decodeBuffer[ch], offset, (int)Math.Min(additionalFrames, remaining));
+                        Array.Copy(
+                            _loopWrapBuffer[ch],
+                            0,
+                            _decodeBuffer[ch],
+                            offset,
+                            (int)consumedFromHead
+                        );
                     }
 
-                    framesRead += Math.Min(additionalFrames, remaining);
+                    framesRead += consumedFromHead;
+                    _decoder.TrySeek(
+                        TimeSpan.FromSeconds((double)consumedFromHead / _decoder.SampleRate)
+                    );
                 }
             }
             else

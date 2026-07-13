@@ -11,7 +11,7 @@
     <Authors>the-byte-bender</Authors>
     <Description>Real-time audio playback for GraphAudio using miniaudio</Description>
     <Copyright>2025</Copyright>
-    <Version>0.4.4</Version>
+    <Version>0.4.5</Version>
     <PackageId>GraphAudio.Realtime</PackageId>
     <PackageProjectUrl>https://github.com/the-byte-bender/GraphAudio</PackageProjectUrl>
     <RepositoryUrl>https://github.com/the-byte-bender/GraphAudio</RepositoryUrl>
@@ -28,7 +28,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="GraphAudio.Core" Version="0.4.2" />
+    <PackageReference Include="GraphAudio.Core" Version="0.4.6" />
   </ItemGroup>
 
   <ItemGroup>
