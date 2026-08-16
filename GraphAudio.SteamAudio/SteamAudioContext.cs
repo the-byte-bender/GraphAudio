@@ -63,7 +63,6 @@ public static class SteamAudioContext
     {
         return _contextMap.GetOrAdd(context, ctx =>
         {
-            SteamAudioNativeLoader.EnsureLoaded();
             var resources = new SteamAudioResources(ctx.SampleRate, AudioBuffer.FramesPerBlock);
 
             var contextSettings = new IPL.ContextSettings
